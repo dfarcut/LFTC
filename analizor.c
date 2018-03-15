@@ -110,6 +110,9 @@ int getNextTK()
                 else if(ch=='='){s=39;pch++;}
                 else if(ch=='<'){s=44;pch++;}
                 else if(ch=='>'){s=47;pch++;}
+                else if(ch==0){addtk(END);
+                    return END;
+                }
                 else printf("eroare \n");
                 break;
             case 1:if(isalnum(ch)||ch=='_'){pch++;}
@@ -317,7 +320,8 @@ int getNextTK()
            else if(ch=='/'){s=0;pch++;}
            else {s=52;pch++;}
            break;
-           default:return END;
+           default:printf("stare netratata \n");
+                return -1;
         }
     }
 }

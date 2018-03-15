@@ -2,9 +2,14 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#define SAFEALLOC(var,Type)if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory);
+#include<stdarg.h>
+#define SAFEALLOC(var,Type)if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
 char *pch;
-enum{ID, END, CT_INT,ASSIGN, SEMICOLON...};
+int line=1;
+enum{ID,CT_INT,CT_REAL,CT_CHAR,CT_STRING,COMMA,SEMICOLON,
+    LPAR,RPAR,LBRACKET,RBRACKET,LACC,RACC,ADD,SUB,MUL,DOT,AND,OR,ASSIGN,EQUAL,NOT,NOTEQ,LESS,LESSEQ,GREATER,GREATEREQ,DIV,BREAK,CHAR,DOUBLE,ELSE,FOR,IF,INT,REUTRN,STRUCT,VOID,WHILE,SWITCH,RETURN,END
+};
+
 typedef struct _Token{
     int code;
     union{
@@ -16,6 +21,31 @@ typedef struct _Token{
     struct _Token *next;
 }Token;
 Token *lastToken;
+Token *tokens;
+
+void err(const char *fmt,...)
+{
+    va_list va;
+    va_start(va,fmt);
+    fprintf(stderr,"error:");
+    vfprintf(stderr,fmt,va);
+    fputc('\n',stderr);
+    va_end(va);
+    exit(-1);
+}
+
+void tkerr(const Token *tk,const char *fmt,...)
+{
+    va_list va;
+    va_start(va,fmt);
+    fprintf(stderr,"error in line %d:",tk->line);
+    vfprintf(stderr,fmt,va);
+    fputc('\n',stderr);
+    va_end(va);
+    exit(-1);
+}
+
+
 
 Token *addtk(int code)
 {
@@ -29,23 +59,33 @@ Token *addtk(int code)
         lastToken->next=tk;
     }
     else
-        tokens=tk;
+    tokens=tk;
     lastToken=tk;
     return tk;
 }
 
+char *createString(char *s1,char *s2)
+{
+    char *s=(char*)malloc((s2-s1+1)*sizeof(char));
+    strncpy(s,s1,s2-s1);
+    s[s2-s1+1]='\0';
+    return s;
+}
 
 int getNextTK()
 {
-    int s=0;
+    int s=0,n;
     char ch;
+    char* pStartch;
+    Token *tk;
     for(;;)
     {
         ch=*pch;
+        printf("# %d %d(%d) \n",s,ch,ch);
         switch(s)
         {
             case 0:
-                if(isalpha(ch)||ch == '_'){s=1;pch++;}
+                if(isalpha(ch)||ch == '_'){pStartch=pch;s=1;pch++;}
                 else if(ch==' '||ch=='\t'||ch=='\n'||ch=='\r'){pch++;}
                 else if(isdigit(ch)&&(ch>='1'&& ch<='9')){s=3;pch++;}
                 else if(isdigit(ch)&& ch=='0'){s=5; pch++;}
@@ -75,8 +115,72 @@ int getNextTK()
             case 1:if(isalnum(ch)||ch=='_'){pch++;}
                    else s=2;
                     break;
-            case 2:addtk(ID);
-                    return ID;
+            case 2:n=pch -pStartch;
+                  if(!memcmp(pStartch,"if",n)&&n==2)
+                  {   (IF);
+                      return IF;
+                  }
+                  else if(!memcmp(pStartch,"for",n)&&n==3)
+                  {
+                    addtk(FOR);
+                    return FOR;
+                  }
+                  else if(!memcmp(pStartch,"while",n)&&n==5)
+                  {
+                      addtk(WHILE);
+                      return WHILE;
+                  }
+                  else if(!memcmp(pStartch,"switch",n)&&n==6)
+                  {
+                    addtk(SWITCH);
+                    return SWITCH;
+                  }
+                   else if(!memcmp(pStartch,"break",n)&&n==5)
+                  {
+                    addtk(BREAK);
+                    return BREAK;
+                  }
+                   else if(!memcmp(pStartch,"double",n)&&n==6)
+                  {
+                    addtk(DOUBLE);
+                    return DOUBLE;
+                  }
+                   else if(!memcmp(pStartch,"else",n)&&n==4)
+                  {
+                    addtk(ELSE);
+                    return ELSE;
+                  }
+                   else if(!memcmp(pStartch,"char",n)&&n==4)
+                  {
+                    addtk(CHAR);
+                    return CHAR;
+                  }
+                  else if(!memcmp(pStartch,"int",n)&&n==3)
+                  {
+                    addtk(INT);
+                    return INT;
+                  }
+                   else if(!memcmp(pStartch,"return",n)&&n==6)
+                  {
+                    addtk(RETURN);
+                    return RETURN;
+                  }
+                   else if(!memcmp(pStartch,"struct",n)&&n==6)
+                  {
+                    addtk(STRUCT);
+                    return STRUCT;
+                  }
+                   else if(!memcmp(pStartch,"void",n)&&n==4)
+                  {
+                    addtk(VOID);
+                    return VOID;
+                  }
+                  else
+                  {
+                  tk=addtk(ID);
+                  tk->text=createString(pStartch,pch); 
+                  return ID;
+                  }
             case 3:if(isdigit(ch)){pch++;}
                  else if(ch=='.'){s=10;pch++;}
                  else if(ch=='e'||ch=='E'){s=12;pch++;}
@@ -84,10 +188,10 @@ int getNextTK()
                  break;
             case 4:addtk(CT_INT);
                 return CT_INT;
-            case 5:if(isalpha(ch) && ch=='x'){s=7; pch++;}
+            case 5:if(isalpha(ch) && ch=='x'){s=7;pch++;}
                    else if(ch>='0' && ch<='7'){s=6;pch++;}
                    else if(ch=='8'||ch=='9'){s=9;pch++;}
-                   break:
+                   break;
             case 6:if(ch>='0' && ch<='7'){pch++;}
             else if(ch=='8'||ch=='9'){s=9;pch++;}
             else if(ch=='.'){s=10;pch++;}
@@ -100,7 +204,7 @@ int getNextTK()
                    else s=4;
                    break;
             case 9:if(isdigit(ch)){pch++;}
-            else if(pch=='.'){s=10;pch++;}
+            else if(ch=='.'){s=10;pch++;}
             else if(ch=='e'||ch=='E'){s=12;pch++;}
             break;
             case 10:if(isdigit(ch)){s=11;pch++;}
@@ -119,7 +223,7 @@ int getNextTK()
             break;
             case 15:addtk(CT_REAL);
                 return CT_REAL;
-            case 16:if(ch=='\\'){s=17;pch++}
+            case 16:if(ch=='\\'){s=17;pch++;}
             else if(ch!='\\'||ch!='\''){s=18;pch++;}
             break;
             case 17:if(ch=='a'||ch=='b'||ch=='f'||ch=='n'||
@@ -201,17 +305,19 @@ int getNextTK()
            return GREATEREQ;
            case 50:addtk(DIV);
            return DIV;
-           case 51:if(ch=='\n'||ch=='\r'\\ch!='\0')
+           case 51:if(ch=='\n'||ch=='\r'||ch!='\0')
            s=0;
            else
            pch++;
            break;
            case 52:if(ch=='*'){s=53;pch++;}
-           else {pch++;break;}
-
-
-
-            default:printf("Stare netratata %d \n",s);
+           else {pch++;}
+           break;
+           case 53:if(ch=='*'){pch++;}
+           else if(ch=='/'){s=0;pch++;}
+           else {s=52;pch++;}
+           break;
+           default:return END;
         }
     }
 }
@@ -219,19 +325,25 @@ int getNextTK()
 
 int main(int argc,char **argv)
 {
-    char fisier;
+    char fisier[1000];
+    FILE *f;
     strcpy(fisier,argv[1]);
     char inbuff[30001];
     int n;
-    if(fopen(fisier,'r')==0)
+    if((f=fopen(fisier,"r"))==0)
     {
         printf("eroare la deschidere fisier \n");
         return -1;
     }
-    n = fread(inbuff,1,30000,fisier);
+    n = fread(inbuff,1,30000,f);
+    fclose(f);
     inbuff[n] = '\0';
-    pch=inbuff[0];
+    pch=&inbuff[0];
     while(getNextTK()!=END)
     {}
+    /*for(Token *t=tokens;t!=NULL;t=t->next)
+    {
+        printf("")
+    }*/
     return 0;
 }

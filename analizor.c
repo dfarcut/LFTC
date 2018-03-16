@@ -2,12 +2,15 @@
 #include <string.h>
 #include <stdlib.h>
 #include <ctype.h>
-#include<stdarg.h>
+#include <stdarg.h>
 #define SAFEALLOC(var,Type)if((var=(Type*)malloc(sizeof(Type)))==NULL)err("not enough memory");
 char *pch;
 int line=1;
 enum{ID,CT_INT,CT_REAL,CT_CHAR,CT_STRING,COMMA,SEMICOLON,
-    LPAR,RPAR,LBRACKET,RBRACKET,LACC,RACC,ADD,SUB,MUL,DOT,AND,OR,ASSIGN,EQUAL,NOT,NOTEQ,LESS,LESSEQ,GREATER,GREATEREQ,DIV,BREAK,CHAR,DOUBLE,ELSE,FOR,IF,INT,REUTRN,STRUCT,VOID,WHILE,SWITCH,RETURN,END
+    LPAR,RPAR,LBRACKET,RBRACKET,LACC,RACC,
+    ADD,SUB,MUL,DOT,AND,OR,ASSIGN,EQUAL,NOT,
+    NOTEQ,LESS,LESSEQ,GREATER,GREATEREQ,DIV,
+    BREAK,CHAR,DOUBLE,ELSE,FOR,IF,INT,STRUCT,VOID,WHILE,SWITCH,RETURN,END
 };
 
 typedef struct _Token{
@@ -66,9 +69,11 @@ Token *addtk(int code)
 
 char *createString(char *s1,char *s2)
 {
-    char *s=(char*)malloc((s2-s1+1)*sizeof(char));
-    strncpy(s,s1,s2-s1);
-    s[s2-s1+1]='\0';
+    int n = s2-s1;
+    char *s=(char*)malloc((n+1)*sizeof(char));
+    strncpy(s,s1,n);
+    //s[n+1]='\0';
+    printf("%s \n",s);
     return s;
 }
 
@@ -81,12 +86,15 @@ int getNextTK()
     for(;;)
     {
         ch=*pch;
-        printf("# %d %d(%d) \n",s,ch,ch);
+        //printf("# %d %s(%d) \n",s,pch,ch);
         switch(s)
         {
             case 0:
                 if(isalpha(ch)||ch == '_'){pStartch=pch;s=1;pch++;}
-                else if(ch==' '||ch=='\t'||ch=='\n'||ch=='\r'){pch++;}
+                else if(ch==' '||ch=='\t'||ch=='\n'||ch=='\r'){
+                 if(ch=='\n')line++;
+                 pch++;
+               }
                 else if(isdigit(ch)&&(ch>='1'&& ch<='9')){s=3;pch++;}
                 else if(isdigit(ch)&& ch=='0'){s=5; pch++;}
                 else if(ch=='\''){s=16;pch++;}
@@ -120,7 +128,7 @@ int getNextTK()
                     break;
             case 2:n=pch -pStartch;
                   if(!memcmp(pStartch,"if",n)&&n==2)
-                  {   (IF);
+                  {   addtk(IF);
                       return IF;
                   }
                   else if(!memcmp(pStartch,"for",n)&&n==3)
@@ -181,19 +189,24 @@ int getNextTK()
                   else
                   {
                   tk=addtk(ID);
-                  tk->text=createString(pStartch,pch); 
+                  tk->text=createString(pStartch,pch);
                   return ID;
                   }
+                  break;
             case 3:if(isdigit(ch)){pch++;}
                  else if(ch=='.'){s=10;pch++;}
                  else if(ch=='e'||ch=='E'){s=12;pch++;}
                  else s=4;
                  break;
-            case 4:addtk(CT_INT);
-                return CT_INT;
+            case 4:{int val;
+                 tk=addtk(CT_INT);
+                 val=atoi(createString(pStartch,pch));
+                 tk->i=val;
+                return CT_INT;}
             case 5:if(isalpha(ch) && ch=='x'){s=7;pch++;}
                    else if(ch>='0' && ch<='7'){s=6;pch++;}
                    else if(ch=='8'||ch=='9'){s=9;pch++;}
+                   else s=0;
                    break;
             case 6:if(ch>='0' && ch<='7'){pch++;}
             else if(ch=='8'||ch=='9'){s=9;pch++;}
@@ -224,8 +237,11 @@ int getNextTK()
             else
             s=15;
             break;
-            case 15:addtk(CT_REAL);
-                return CT_REAL;
+            case 15:{double number;
+                  sscanf(createString(pStartch,pch),"%lf",&number);
+                  tk=addtk(CT_REAL);
+                  tk->r=number;
+                return CT_REAL;}
             case 16:if(ch=='\\'){s=17;pch++;}
             else if(ch!='\\'||ch!='\''){s=18;pch++;}
             break;
@@ -345,9 +361,53 @@ int main(int argc,char **argv)
     pch=&inbuff[0];
     while(getNextTK()!=END)
     {}
-    /*for(Token *t=tokens;t!=NULL;t=t->next)
+    for(Token *t=tokens;t!=NULL;t=t->next)
     {
-        printf("")
-    }*/
+        printf("line number: %d \n",t->line);
+        switch(t->code)
+        {
+          case 0:printf("ID\n");break;
+          case 1:printf("CT_INT with the value of %d \n",t->i);break;
+          case 2:printf("CT_REAL with the value of %lf\n",t->r);break;
+          case 3:printf("CT_CHAR\n");break;
+          case 4:printf("CT_STRING\n");break;
+          case 5:printf("COMMA\n");break;
+          case 6:printf("SEMICOLON\n");break;
+          case 7:printf("LPAR\n");break;
+          case 8:printf("RPAR\n");break;
+          case 9:printf("LBRACKET\n");break;
+          case 10:printf("RBRACKET\n");break;
+          case 11:printf("LACC\n");break;
+          case 12:printf("RACC\n");break;
+          case 13:printf("ADD\n");break;
+          case 14:printf("SUB\n");break;
+          case 15:printf("MUL\n");break;
+          case 16:printf("DOT\n");break;
+          case 17:printf("AND\n");break;
+          case 18:printf("OR\n");break;
+          case 19:printf("ASSIGN\n");break;
+          case 20:printf("EQUAL\n");break;
+          case 21:printf("NOT\n");break;
+          case 22:printf("NOTEQ\n");break;
+          case 23:printf("LESS\n");break;
+          case 24:printf("LESSEQ\n");break;
+          case 25:printf("GREATER\n");break;
+          case 26:printf("GREATEREQ\n");break;
+          case 27:printf("DIV\n");break;
+          case 28:printf("BREAK\n");break;
+          case 29:printf("CHAR\n");break;
+          case 30:printf("DOUBLE\n");break;
+          case 31:printf("ELSE\n");break;
+          case 32:printf("FOR\n");break;
+          case 33:printf("IF\n");break;
+          case 34:printf("INT\n");break;
+          case 35:printf("STRUCT\n");break;
+          case 36:printf("VOID\n");break;
+          case 37:printf("WHILE\n");break;
+          case 38:printf("SWICTH\n");break;
+          case 39:printf("RETURN\n");break;
+          case 40:printf("END\n");break;
+        }
+    }
     return 0;
 }

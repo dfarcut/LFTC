@@ -92,6 +92,7 @@ int getNextTK()
     char ch;
     char tmpch;
     char* pStartch;
+    int base=10;
     Token *tk;
     for(;;)
     {
@@ -212,16 +213,18 @@ int getNextTK()
                  break;
             case 4:{int val;
                  tk=addtk(CT_INT);
-                 val=atoi(createString(pStartch,pch));
+                 int n=pch-pStartch;
+                 char *stri=createString(pStartch,pch);
+                 val=strtol(stri,stri+n,base);
                  tk->i=val;
                 return CT_INT;}
-            case 5:if(isalpha(ch) && ch=='x'){s=7;pch++;}
+            case 5:if(isalpha(ch) && ch=='x'){base=16;s=7;pch++;}
                    else if(ch>='0' && ch<='7'){s=6;pch++;}
                    else if(ch=='8'||ch=='9'){s=9;pch++;}
                    else s=0;
                    break;
-            case 6:if(ch>='0' && ch<='7'){pch++;}
-            else if(ch=='8'||ch=='9'){s=9;pch++;}
+            case 6:if(ch>='0' && ch<='7'){base=8;pch++;}
+            else if(ch=='8'||ch=='9'){base=10;s=9;pch++;}
             else if(ch=='.'){s=10;pch++;}
             else if(ch=='e'||ch=='E'){s=12;pch++;}
             else s=4;
@@ -251,7 +254,7 @@ int getNextTK()
             break;
             case 15:{double number;
                   char *t=createString(pStartch,pch);
-                  sscanf(t,"%lf",&number);
+                  number=atof(t);
                   printf("stringul este %s \n",t);
                   tk=addtk(CT_REAL);
                   tk->r=number;
@@ -280,6 +283,7 @@ int getNextTK()
             {
             tk=addtk(CT_STRING);
             tk->text=createString(pStartch,pch);
+            //for(char i=tk->text[0];i!='\0';i=
             return CT_STRING;
             }
             case 23:addtk(COMMA);

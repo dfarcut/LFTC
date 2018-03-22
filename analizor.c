@@ -72,7 +72,7 @@ char *createString(char *s1,char *s2)
     int n = s2-s1;
     char *s=(char*)malloc((n+1)*sizeof(char));
     strncpy(s,s1,n);
-    //s[n+1]='\0';
+    s[n+1]='\0';
     printf("%s \n",s);
     return s;
 }
@@ -92,13 +92,15 @@ int getNextTK()
             case 0:
                 if(isalpha(ch)||ch == '_'){pStartch=pch;s=1;pch++;}
                 else if(ch==' '||ch=='\t'||ch=='\n'||ch=='\r'){
-                 if(ch=='\n')line++;
+                 if(ch=='\n')
+                 line++;
                  pch++;
                }
                 else if(isdigit(ch)&&(ch>='1'&& ch<='9')){s=3;pch++;}
                 else if(isdigit(ch)&& ch=='0'){s=5; pch++;}
-                else if(ch=='\''){s=16;pch++;}
-                else if(ch=='\"'){s=20;pch++;}
+                else if(ch=='\''){pStartch=pch;s=16;pch++;}
+                else if(ch=='\"'){pStartch=pch;
+                  s=20;pch++;}
                 else if(ch==','){s=23;pch++;}
                 else if(ch==';'){s=24;pch++;}
                 else if(ch=='('){s=25;pch++;}
@@ -250,7 +252,8 @@ int getNextTK()
             break;
             case 18:if(ch=='\''){s=19;pch++;}
             break;
-            case 19:addtk(CT_CHAR);
+            case 19:tk=addtk(CT_CHAR);
+            tk->text=createString(pStartch,pch);
             return CT_CHAR;
             case 20:if(ch=='\\'){s=21;pch++;}
             else if(ch=='\"'){s=22;pch++;}
@@ -259,8 +262,12 @@ int getNextTK()
             case 21:if(ch=='a'||ch=='b'||ch=='f'||ch=='n'||
             ch=='r'||ch=='t'||ch=='v'||ch=='\''||ch=='?'||ch=='\\'||ch=='0'||ch=='\"'){s=20;pch++;}
             break;
-            case 22:addtk(CT_STRING);
+            case 22:
+            {
+            tk=addtk(CT_STRING);
+            tk->text=createString(pStartch,pch);
             return CT_STRING;
+            }
             case 23:addtk(COMMA);
             return COMMA;
             case 24:addtk(SEMICOLON);
@@ -284,8 +291,9 @@ int getNextTK()
            case 33:addtk(MUL);
            return MUL;
            case 34:if(ch=='/'){s=51;pch++;}
-           else if(ch=='*'){s=52;pch++;}
-           else s=50;
+           else if(ch=='*'){pStartch=pch; s=52;pch++;}
+           else
+           s=50;
            break;
            case 35:addtk(DOT);
            return DOT;
@@ -325,15 +333,18 @@ int getNextTK()
            case 50:addtk(DIV);
            return DIV;
            case 51:if(ch=='\n'||ch=='\r'||ch!='\0')
-           s=0;
+           {pch++;
+           s=0;}
            else
            pch++;
            break;
            case 52:if(ch=='*'){s=53;pch++;}
-           else {pch++;}
+           else if(ch=='\n'){line++;pch++;}
+           else pch++;
            break;
            case 53:if(ch=='*'){pch++;}
            else if(ch=='/'){s=0;pch++;}
+           else if(ch=='\n'){line++;s=52;pch++;}
            else {s=52;pch++;}
            break;
            default:printf("stare netratata \n");
@@ -366,11 +377,11 @@ int main(int argc,char **argv)
         printf("line number: %d \n",t->line);
         switch(t->code)
         {
-          case 0:printf("ID\n");break;
+          case 0:printf("ID:%s\n",t->text);break;
           case 1:printf("CT_INT with the value of %d \n",t->i);break;
           case 2:printf("CT_REAL with the value of %lf\n",t->r);break;
           case 3:printf("CT_CHAR\n");break;
-          case 4:printf("CT_STRING\n");break;
+          case 4:printf("CT_STRING with the following text %s \n",t->text);break;
           case 5:printf("COMMA\n");break;
           case 6:printf("SEMICOLON\n");break;
           case 7:printf("LPAR\n");break;

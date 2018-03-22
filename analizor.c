@@ -283,7 +283,24 @@ int getNextTK()
             {
             tk=addtk(CT_STRING);
             tk->text=createString(pStartch,pch);
-            //for(char i=tk->text[0];i!='\0';i=
+            int n=pStartch-pch;
+            char tempch;
+            int i,j;
+            for(i=0;i<n;i++)
+            {
+                if(tk->text[i]=='\\')
+                {
+                i++;
+                tempch=escch(tk->text[i]);
+                if(tempch=='\n'||tempch=='\t'||tempch=='\r')
+                {
+                    printf("%c \n",tempch);
+                    tk->text[i-1]=tempch;
+                    for(j=i+1;j<n;j++)
+                        tk->text[j]=tk->text[j+1];
+                }
+                }
+            }
             return CT_STRING;
             }
             case 23:addtk(COMMA);

@@ -76,11 +76,21 @@ char *createString(char *s1,char *s2)
     printf("%s \n",s);
     return s;
 }
-
+char escch(char ch)
+{
+    switch(ch)
+    {
+        case 'n':return '\n';
+        case 't':return '\t';
+        case 'r':return '\r';
+        default: return ch;
+    }
+}
 int getNextTK()
 {
     int s=0,n;
     char ch;
+    char tmpch;
     char* pStartch;
     Token *tk;
     for(;;)
@@ -96,8 +106,8 @@ int getNextTK()
                  line++;
                  pch++;
                }
-                else if(isdigit(ch)&&(ch>='1'&& ch<='9')){s=3;pch++;}
-                else if(isdigit(ch)&& ch=='0'){s=5; pch++;}
+                else if(isdigit(ch)&&(ch>='1'&& ch<='9')){pStartch=pch;s=3;pch++;}
+                else if(isdigit(ch)&& ch=='0'){pStartch=pch;s=5; pch++;}
                 else if(ch=='\''){pStartch=pch;s=16;pch++;}
                 else if(ch=='\"'){pStartch=pch;
                   s=20;pch++;}
@@ -240,21 +250,25 @@ int getNextTK()
             s=15;
             break;
             case 15:{double number;
-                  sscanf(createString(pStartch,pch),"%lf",&number);
+                  char *t=createString(pStartch,pch);
+                  sscanf(t,"%lf",&number);
+                  printf("stringul este %s \n",t);
                   tk=addtk(CT_REAL);
                   tk->r=number;
                 return CT_REAL;}
-            case 16:if(ch=='\\'){s=17;pch++;}
-            else if(ch!='\\'||ch!='\''){s=18;pch++;}
+            case 16:if(ch=='\\'){tmpch=escch(ch);s=17;pch++;}
+            else if(ch!='\\'||ch!='\''){tmpch=escch(ch);s=18;pch++;}
             break;
             case 17:if(ch=='a'||ch=='b'||ch=='f'||ch=='n'||
             ch=='r'||ch=='t'||ch=='v'||ch=='\''||ch=='?'||ch=='\\'||ch=='0'||ch=='\"'){s=18;pch++;}
             break;
             case 18:if(ch=='\''){s=19;pch++;}
             break;
+            
             case 19:tk=addtk(CT_CHAR);
-            tk->text=createString(pStartch,pch);
+            tk->i=tmpch;
             return CT_CHAR;
+            
             case 20:if(ch=='\\'){s=21;pch++;}
             else if(ch=='\"'){s=22;pch++;}
             else {s=20;pch++;}
@@ -332,7 +346,7 @@ int getNextTK()
            return GREATEREQ;
            case 50:addtk(DIV);
            return DIV;
-           case 51:if(ch=='\n'||ch=='\r'||ch!='\0')
+           case 51:if(ch=='\n'||ch=='\r'||ch=='\0')
            {pch++;
            s=0;}
            else
@@ -380,7 +394,7 @@ int main(int argc,char **argv)
           case 0:printf("ID:%s\n",t->text);break;
           case 1:printf("CT_INT with the value of %d \n",t->i);break;
           case 2:printf("CT_REAL with the value of %lf\n",t->r);break;
-          case 3:printf("CT_CHAR\n");break;
+          case 3:printf("CT_CHAR with the value of %c\n",t->i);break;
           case 4:printf("CT_STRING with the following text %s \n",t->text);break;
           case 5:printf("COMMA\n");break;
           case 6:printf("SEMICOLON\n");break;

@@ -73,7 +73,7 @@ char *createString(char *s1,char *s2)
     char *s=(char*)malloc((n+1)*sizeof(char));
     strncpy(s,s1,n);
     s[n+1]='\0';
-    printf("%s \n",s);
+    //printf("%s \n",s);
     return s;
 }
 char escch(char ch)
@@ -221,6 +221,7 @@ int getNextTK()
             case 5:if(isalpha(ch) && ch=='x'){base=16;s=7;pch++;}
                    else if(ch>='0' && ch<='7'){s=6;pch++;}
                    else if(ch=='8'||ch=='9'){s=9;pch++;}
+                   else if(ch=='.'){s=10;pch++;}
                    else s=0;
                    break;
             case 6:if(ch>='0' && ch<='7'){base=8;pch++;}
@@ -240,7 +241,8 @@ int getNextTK()
             break;
             case 10:if(isdigit(ch)){s=11;pch++;}
             break;
-            case 11:if(isdigit(ch)){s=12;pch++;}
+            case 11:if(ch=='e'||ch=='E'){s=12;pch++;}
+            else if(isdigit(ch)){pch++;}
             else s=15;
             break;
             case 12:if(ch=='-'||ch=='+'){s=13;pch++;}
@@ -267,11 +269,11 @@ int getNextTK()
             break;
             case 18:if(ch=='\''){s=19;pch++;}
             break;
-            
+
             case 19:tk=addtk(CT_CHAR);
             tk->i=tmpch;
             return CT_CHAR;
-            
+
             case 20:if(ch=='\\'){s=21;pch++;}
             else if(ch=='\"'){s=22;pch++;}
             else {s=20;pch++;}
@@ -283,22 +285,26 @@ int getNextTK()
             {
             tk=addtk(CT_STRING);
             tk->text=createString(pStartch,pch);
-            int n=pStartch-pch;
+            int n=pch-pStartch;
             char tempch;
             int i,j;
+
             for(i=0;i<n;i++)
             {
+                printf("text[%d] este %c \n",i,tk->text[i]);
                 if(tk->text[i]=='\\')
                 {
                 i++;
                 tempch=escch(tk->text[i]);
+                printf("tempch este %c \n",tempch);
                 if(tempch=='\n'||tempch=='\t'||tempch=='\r')
                 {
-                    printf("%c \n",tempch);
+                    printf("tempch este %c \n",tempch);
                     tk->text[i-1]=tempch;
-                    for(j=i+1;j<n;j++)
+                    for(j=i;j<n;j++)
                         tk->text[j]=tk->text[j+1];
                 }
+                i--;
                 }
             }
             return CT_STRING;

@@ -25,6 +25,8 @@ typedef struct _Token{
 }Token;
 Token *lastToken;
 Token *tokens;
+Token *crtTk;
+Token *consumedTk;
 
 void err(const char *fmt,...)
 {
@@ -48,8 +50,168 @@ void tkerr(const Token *tk,const char *fmt,...)
     exit(-1);
 }
 
+//syntactic analizer functions
 
+int consume(int code)
+{
+if(crtTk->code==code){
+consumedTk=crtTk;
+crtTk=crtTk->next;
+return 1;
+}
+return 0;
+}
 
+int unit()
+{
+  Token *initToken = crtTk;
+  for(;;)
+  {
+    if(declStruct()||declFunc()||declVar())
+    {}
+    else
+    break;
+  }
+  if(consume(END))
+  {
+    return 1;
+  }
+  crtTk=initToken;
+  return 0;
+}
+int typeBase()
+{
+  Token *initToken = crtTk;
+  if(consume(INT)||consume(DOUBLE)||consume(CHAR)||consume(STRUCT))
+  {
+    if(consume(ID))
+    return 1;
+  }
+  crtTk=initToken;
+  return 0;
+}
+int declStruct()
+{
+  Token *initToken = crtTk;
+  if(consume(STRUCT))
+  {
+    if(consume(ID))
+    {
+      if(consume(LACC))
+      {
+      for(;;)
+      {
+        if(declVar())
+        {}
+        else
+        break;
+      }
+      if(consume(RACC))
+      {
+        if(conusme(SEMICOLON))
+        {
+          return 1;
+        }
+      }
+      }
+    }
+  }
+  crtTk = initToken;
+  return 0;
+}
+
+int declVar()
+{
+  Token *initToken = crtTk;
+  if(typebase())
+  {
+    if(consume(ID))
+    {
+      if(arrayDecl())
+      {}
+      for(;;)
+      {
+        if(consume(COMMA))
+        {
+          if(consume(ID))
+          {
+            if(arrayDecl())
+            {}
+          }
+        }
+      }
+      if(conusme(SEMICOLON))
+      return 1;
+    }
+  }
+  crtTk = initToken;
+  return 0;
+}
+
+int arrayDecl()
+{
+  Token *initToken = crtTk;
+  if(consume(LBRACKET))
+  {
+    if(expr())
+    {}
+    if(consume(RBRACKET))
+    return 1;
+  }
+  crtTk = initToken;
+  return 0;
+}
+int typeName()
+{
+    Token *initToken = crtTk;
+    if(typeBase())
+    {
+      if(arrayDecl())
+      {}
+      return 1;
+    }
+    crtTk = initToken;
+    return 0;
+}
+int declFunc()
+{
+  Token *initToken = crtTk;
+  if(typeBase())
+  {
+    if(consume(MUL)|consume(VOID))
+    {
+      if(consume(ID))
+      {
+        if(consume(LPAR))
+        {
+          if(funcArg())
+          {
+            for(;;)
+            {
+              if(consume(COMMA))
+              {
+                if(funcArg())
+                {}
+                else
+                break;
+              }
+            }
+          }
+          if(conusme(RPAR))
+          {
+            if(stmCompound())
+            {
+              return 1;
+            }
+          }
+        }
+      }
+    }
+  }
+  crtTk = initToken;
+  return 0;
+}
+//lexical analizer functions
 Token *addtk(int code)
 {
     Token *tk;
@@ -83,6 +245,8 @@ char escch(char ch)
         case 'n':return '\n';
         case 't':return '\t';
         case 'r':return '\r';
+        case '"':return '\"';
+        case '\'':return '\'';
         default: return ch;
     }
 }
@@ -284,7 +448,7 @@ int getNextTK()
             case 22:
             {
             tk=addtk(CT_STRING);
-            tk->text=createString(pStartch,pch);
+            tk->text=createString(pStartch+1,pch-1);
             int n=pch-pStartch;
             char tempch;
             int i,j;
@@ -295,17 +459,14 @@ int getNextTK()
                 if(tk->text[i]=='\\')
                 {
                 i++;
+                printf("text este %c \n",tk->text[i]);
                 tempch=escch(tk->text[i]);
                 printf("tempch este %c \n",tempch);
-                if(tempch=='\n'||tempch=='\t'||tempch=='\r')
-                {
-                    printf("tempch este %c \n",tempch);
-                    tk->text[i-1]=tempch;
-                    for(j=i;j<n;j++)
-                        tk->text[j]=tk->text[j+1];
-                }
+                tk->text[i-1]=tempch;
+                for(j=i;j<n;j++)
+                tk->text[j]=tk->text[j+1];
                 i--;
-                }
+              }
             }
             return CT_STRING;
             }
@@ -387,6 +548,9 @@ int getNextTK()
            else if(ch=='/'){s=0;pch++;}
            else if(ch=='\n'){line++;s=52;pch++;}
            else {s=52;pch++;}
+           break;
+           case 54:if(ch=='&')
+           {pch++;s=36;}
            break;
            default:printf("stare netratata \n");
                 return -1;
